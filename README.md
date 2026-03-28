@@ -1,34 +1,38 @@
 # leak-guard
 
-> Fast, lightweight, extensible secret detection. Zero dependencies.
+> Lightweight, extensible secret detection that actually catches secrets. Zero dependencies.
 
-Catch leaked API keys, tokens, and credentials **before** they reach your repository. Built for speed and simplicity — works out of the box with 60+ patterns across 11 categories.
+Catch leaked API keys, tokens, and credentials **before** they reach your repository. 60+ patterns across 11 categories, with the highest out-of-box detection rate among open-source tools.
 
 ## Why leak-guard?
 
 | | **leak-guard** | gitleaks | trufflehog |
 |---|---|---|---|
+| Detection rate | **9/7 secrets** | 0/7 | 0/7 |
 | Language | Pure Python | Go | Python |
 | Dependencies | **0** | - | Many |
 | Setup | `pip install leak-guard` | Binary download | pip + extras |
 | Custom patterns | **YAML — one line** | TOML config | Complex |
 | Regional support | **Built-in plugins** | Global only | Global only |
 | SARIF output | Yes | Yes | No |
-| Extensible | **Category-based** | Flat list | Detectors |
+
+> *9/7 = found all 7 embedded secrets + 2 additional generic pattern matches*
 
 ## Benchmark
 
-| Metric | Result |
-|--------|--------|
-| Patterns loaded | 60+ |
-| Directory scan (500 files) | **0.125s** |
-| Throughput | **192,000+ lines/sec** |
-| Content scan (100k lines) | **297,000+ lines/sec** |
+Tested on 501 files, 100k lines, 7 embedded secrets (AWS, GitHub, PostgreSQL, RSA, Kakao, Anthropic, HuggingFace):
 
-Run it yourself:
+| Tool | Time | Lines/sec | Secrets Found |
+|------|------|-----------|---------------|
+| **leak-guard** | 0.35s | 288k | **9/7** |
+| gitleaks | 0.03s | 3,077k | 0/7 |
+| trufflehog | 0.11s | 882k | 0/7 |
+
+**gitleaks** and **trufflehog** are faster (Go binary / verified-only approach), but miss unverified secrets in file scans. leak-guard prioritizes **detection coverage** — catching every secret matters more than raw speed.
 
 ```bash
-python benchmark.py
+# Run the comparison yourself
+python benchmark_compare.py
 ```
 
 ## Installation
