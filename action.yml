@@ -1,0 +1,65 @@
+name: "leak-guard"
+description: "Fast, lightweight secret detection with 60+ patterns"
+author: "cobyoo"
+
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  path:
+    description: "Path to scan"
+    required: false
+    default: "."
+  severity:
+    description: "Minimum severity (high, medium, low)"
+    required: false
+    default: ""
+  format:
+    description: "Output format (text, json, sarif)"
+    required: false
+    default: "text"
+  category:
+    description: "Comma-separated categories to scan"
+    required: false
+    default: ""
+  exclude-category:
+    description: "Comma-separated categories to exclude"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+
+    - name: Install leak-guard
+      shell: bash
+      run: pip install leak-guard
+
+    - name: Run scan
+      shell: bash
+      run: |
+        ARGS="${{ inputs.path }}"
+        if [ -n "${{ inputs.severity }}" ]; then
+          ARGS="$ARGS --severity ${{ inputs.severity }}"
+        fi
+        if [ -n "${{ inputs.format }}" ]; then
+          ARGS="$ARGS --format ${{ inputs.format }}"
+        fi
+        if [ -n "${{ inputs.category }}" ]; then
+          IFS=',' read -ra CATS <<< "${{ inputs.category }}"
+          for cat in "${CATS[@]}"; do
+            ARGS="$ARGS --category $cat"
+          done
+        fi
+        if [ -n "${{ inputs.exclude-category }}" ]; then
+          IFS=',' read -ra CATS <<< "${{ inputs.exclude-category }}"
+          for cat in "${CATS[@]}"; do
+            ARGS="$ARGS --exclude-category $cat"
+          done
+        fi
+        leak-guard $ARGS

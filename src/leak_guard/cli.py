@@ -55,6 +55,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="exclude specific categories (can repeat)",
     )
     parser.add_argument(
+        "--entropy",
+        action="store_true",
+        help="enable entropy-based detection for random secrets",
+    )
+    parser.add_argument(
+        "--scan-history",
+        type=int,
+        metavar="N",
+        default=None,
+        help="scan last N git commits for secrets",
+    )
+    parser.add_argument(
+        "--diff",
+        nargs="?",
+        const="HEAD~1",
+        default=None,
+        metavar="BASE",
+        help="scan git diff from BASE to HEAD (default: HEAD~1)",
+    )
+    parser.add_argument(
         "--list-categories",
         action="store_true",
         help="list available pattern categories and exit",
@@ -94,7 +114,13 @@ def main(argv: list[str] | None = None) -> None:
         allowlist = load_allowlist(config_path)
 
     # Scan
-    if args.pre_commit:
+    if args.scan_history is not None:
+        from .history import scan_git_history
+        findings = scan_git_history(max_commits=args.scan_history, patterns=patterns)
+    elif args.diff is not None:
+        from .history import scan_git_diff
+        findings = scan_git_diff(base=args.diff, patterns=patterns)
+    elif args.pre_commit:
         findings = scan_staged_files(patterns, allowlist)
     else:
         target = Path(args.path)
@@ -105,6 +131,37 @@ def main(argv: list[str] | None = None) -> None:
         else:
             print(f"Error: {args.path} not found", file=sys.stderr)
             sys.exit(2)
+
+    # Entropy scan
+    if args.entropy and args.scan_history is None and args.diff is None:
+        from .entropy import find_high_entropy
+        from .scanner import Finding, SKIP_DIRS, is_binary
+
+        target = Path(args.path)
+        files = [target] if target.is_file() else [
+            p for p in target.rglob("*")
+            if p.is_file() and not is_binary(p)
+            and not any(s in p.parts for s in SKIP_DIRS)
+        ]
+
+        for fpath in files:
+            try:
+                content = fpath.read_text(encoding="utf-8", errors="ignore")
+            except (OSError, PermissionError):
+                continue
+            for line_number, line in enumerate(content.splitlines(), start=1):
+                if "leak-guard:ignore" in line:
+                    continue
+                for matched_text, entropy in find_high_entropy(line):
+                    findings.append(Finding(
+                        file=str(fpath),
+                        line_number=line_number,
+                        line=line.rstrip(),
+                        pattern_name=f"High Entropy String (entropy={entropy:.1f})",
+                        severity="medium",
+                        category="entropy",
+                        matched_text=matched_text,
+                    ))
 
     # Filter by severity
     if args.severity:

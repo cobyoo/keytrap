@@ -16,6 +16,21 @@ Catch leaked API keys, tokens, and credentials **before** they reach your reposi
 | SARIF output | Yes | Yes | No |
 | Extensible | **Category-based** | Flat list | Detectors |
 
+## Benchmark
+
+| Metric | Result |
+|--------|--------|
+| Patterns loaded | 60+ |
+| Directory scan (500 files) | **0.125s** |
+| Throughput | **192,000+ lines/sec** |
+| Content scan (100k lines) | **297,000+ lines/sec** |
+
+Run it yourself:
+
+```bash
+python benchmark.py
+```
+
 ## Installation
 
 ```bash
@@ -39,6 +54,37 @@ leak-guard --format json .
 
 # SARIF output for GitHub Advanced Security
 leak-guard --format sarif . > results.sarif
+```
+
+## Advanced Features
+
+### Entropy-based detection
+
+Catch random/high-entropy secrets that don't match any known pattern:
+
+```bash
+leak-guard --entropy .
+```
+
+### Git history scan
+
+Scan past commits for leaked secrets:
+
+```bash
+# Scan last 50 commits
+leak-guard --scan-history 50
+
+# Scan diff from a specific commit
+leak-guard --diff HEAD~5
+```
+
+### GitHub Action
+
+```yaml
+- uses: cobyoo/leak-guard@v1
+  with:
+    severity: high
+    format: sarif
 ```
 
 ## Pre-commit Hook
