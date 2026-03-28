@@ -39,6 +39,47 @@ class Finding:
     matched_text: str
 
 
+GENERIC_CATEGORIES = frozenset({"generic"})
+
+SEVERITY_RANK = {"high": 2, "medium": 1, "low": 0}
+
+
+def dedup_line_findings(line_findings: list[Finding]) -> list[Finding]:
+    """Remove generic duplicates when a specific pattern already matched the same text."""
+    if len(line_findings) <= 1:
+        return line_findings
+
+    specific = [f for f in line_findings if f.category not in GENERIC_CATEGORIES]
+    generic = [f for f in line_findings if f.category in GENERIC_CATEGORIES]
+
+    if not specific:
+        # All generic — keep the highest severity one per matched region
+        return _dedup_by_overlap(generic)
+
+    # Drop generic findings whose matched_text overlaps with a specific finding
+    specific_texts = {f.matched_text for f in specific}
+    kept_generic = [
+        g for g in generic
+        if not any(g.matched_text in st or st in g.matched_text for st in specific_texts)
+    ]
+
+    return specific + kept_generic
+
+
+def _dedup_by_overlap(findings: list[Finding]) -> list[Finding]:
+    """Among findings on the same line, keep the highest severity per overlapping match."""
+    if not findings:
+        return findings
+    findings.sort(key=lambda f: SEVERITY_RANK.get(f.severity, 0), reverse=True)
+    kept: list[Finding] = []
+    seen_texts: set[str] = set()
+    for f in findings:
+        if not any(f.matched_text in s or s in f.matched_text for s in seen_texts):
+            kept.append(f)
+            seen_texts.add(f.matched_text)
+    return kept
+
+
 def is_binary(path: Path) -> bool:
     return path.suffix.lower() in BINARY_EXTENSIONS
 
@@ -61,13 +102,14 @@ def scan_content(
         if INLINE_IGNORE in line:
             continue
 
+        line_findings: list[Finding] = []
         for pat in patterns:
             match = pat.pattern.search(line)
             if match:
                 matched = match.group(0)
                 if allowlist and matched in allowlist:
                     continue
-                findings.append(Finding(
+                line_findings.append(Finding(
                     file=filename,
                     line_number=line_number,
                     line=line.rstrip(),
@@ -76,6 +118,8 @@ def scan_content(
                     category=pat.category,
                     matched_text=matched,
                 ))
+
+        findings.extend(dedup_line_findings(line_findings))
 
     return findings
 
