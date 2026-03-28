@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "leak-guard"
-version = "0.1.0"
-description = "Lightweight secret detection tool with Korean service API key patterns"
+version = "0.2.0"
+description = "Fast, lightweight, extensible secret detection. Zero dependencies."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
-keywords = ["security", "secret-detection", "pre-commit", "git"]
+keywords = ["security", "secret-detection", "pre-commit", "git", "leak", "credentials"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -18,6 +18,9 @@ classifiers = [
     "Topic :: Security",
     "Topic :: Software Development :: Quality Assurance",
 ]
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]
 
 [project.scripts]
 leak-guard = "leak_guard.cli:main"
@@ -29,5 +32,6 @@ packages = ["src/leak_guard"]
 pythonpath = ["src"]
 
 [project.urls]
-Homepage = "https://github.com/undo/leak-guard"
-Repository = "https://github.com/undo/leak-guard"
+Homepage = "https://github.com/cobyoo/leak-guard"
+Repository = "https://github.com/cobyoo/leak-guard"
+Issues = "https://github.com/cobyoo/leak-guard/issues"

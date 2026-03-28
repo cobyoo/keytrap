@@ -1,15 +1,20 @@
 # leak-guard
 
-Lightweight secret detection tool with built-in support for Korean service API keys.
+> Fast, lightweight, extensible secret detection. Zero dependencies.
 
-## Features
+Catch leaked API keys, tokens, and credentials **before** they reach your repository. Built for speed and simplicity — works out of the box with 60+ patterns across 11 categories.
 
-- Detects secrets in source code before they get committed
-- **Korean service support**: Kakao, Naver, Toss Payments, NHN Cloud, PortOne(Iamport), Solapi, 공공데이터포털
-- **Global service support**: AWS, GitHub, Google, Stripe, Slack, JWT, and more
-- Pre-commit hook integration
-- JSON output for CI/CD pipelines
-- Zero dependencies — pure Python
+## Why leak-guard?
+
+| | **leak-guard** | gitleaks | trufflehog |
+|---|---|---|---|
+| Language | Pure Python | Go | Python |
+| Dependencies | **0** | - | Many |
+| Setup | `pip install leak-guard` | Binary download | pip + extras |
+| Custom patterns | **YAML — one line** | TOML config | Complex |
+| Regional support | **Built-in plugins** | Global only | Global only |
+| SARIF output | Yes | Yes | No |
+| Extensible | **Category-based** | Flat list | Detectors |
 
 ## Installation
 
@@ -17,65 +22,138 @@ Lightweight secret detection tool with built-in support for Korean service API k
 pip install leak-guard
 ```
 
-## Usage
-
-### Scan a directory
+## Quick Start
 
 ```bash
+# Scan current directory
 leak-guard .
-leak-guard ./src
+
+# Scan a specific file
+leak-guard src/config.py
+
+# Only high severity
+leak-guard --severity high .
+
+# JSON output for CI/CD
+leak-guard --format json .
+
+# SARIF output for GitHub Advanced Security
+leak-guard --format sarif . > results.sarif
 ```
 
-### Scan a single file
-
-```bash
-leak-guard config.py
-```
-
-### Pre-commit hook
+## Pre-commit Hook
 
 Add to `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/undo/leak-guard
-    rev: v0.1.0
+  - repo: https://github.com/cobyoo/leak-guard
+    rev: v0.2.0
     hooks:
       - id: leak-guard
 ```
 
-### Options
+## Pattern Categories
 
-```
---pre-commit    Scan only git staged files
---format json   Output as JSON
---no-color      Disable colored output
---no-korean     Disable Korean service patterns
---severity high Only show high severity findings
+```bash
+leak-guard --list-categories
 ```
 
-## Supported Patterns
+| Category | Examples | Count |
+|----------|----------|-------|
+| `cloud` | AWS, GCP, Azure, DigitalOcean, Heroku, Vercel, Supabase, Firebase | 14 |
+| `vcs` | GitHub, GitLab, Bitbucket, npm, PyPI, RubyGems | 7 |
+| `payments` | Stripe, PayPal, Square | 5 |
+| `messaging` | Slack, Discord, Telegram, Twilio, SendGrid, Mailgun | 9 |
+| `databases` | PostgreSQL, MySQL, MongoDB, Redis connection strings | 2 |
+| `ci_cd` | CircleCI, Travis CI, Jenkins | 3 |
+| `identity` | Auth0, Okta, JWT, OAuth | 4 |
+| `crypto` | Private keys (RSA, EC, DSA, PGP, OpenSSH) | 2 |
+| `ai_ml` | OpenAI, Anthropic, HuggingFace, Replicate, Cohere | 6 |
+| `generic` | API keys, passwords, tokens, base64 private keys | 3 |
+| `regional_kr` | Kakao, Naver, Toss, PortOne | 5 |
 
-### Korean Services
-| Service | Pattern |
-|---------|---------|
-| Kakao | REST API Key, JavaScript Key, Admin Key |
-| Naver | Client ID, Client Secret |
-| Toss Payments | Secret Key |
-| NHN Cloud | AppKey |
-| 공공데이터포털 | API Key |
-| PortOne (Iamport) | API Key, Secret |
-| Solapi (CoolSMS) | API Key, Secret |
+### Scan specific categories only
 
-### Global Services
-AWS, GitHub, Google, Stripe, Slack Webhook, JWT, Private Keys, and generic API keys/secrets.
+```bash
+# Only check cloud and payments
+leak-guard --category cloud --category payments .
+
+# Exclude regional patterns
+leak-guard --exclude-category regional_kr .
+```
+
+## Custom Patterns
+
+Create `.leakguard.yml` in your project root:
+
+```yaml
+patterns:
+  - name: "Internal Service Token"
+    pattern: "MYCO_[A-Z0-9]{32}"
+    severity: high
+    category: custom
+
+  - name: "Internal DB Password"
+    pattern: "db_pass_[a-zA-Z0-9]{16,}"
+    severity: high
+    ignorecase: true
+
+allowlist:
+  - "EXAMPLE_KEY_FOR_DOCS"
+  - "test_token_placeholder"
+```
+
+## Inline Ignore
+
+Suppress a specific line:
+
+```python
+api_key = "not-a-real-key"  # leak-guard:ignore
+```
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+- name: Secret Scan
+  run: |
+    pip install leak-guard
+    leak-guard --format sarif . > results.sarif
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+### GitLab CI
+
+```yaml
+secret-scan:
+  script:
+    - pip install leak-guard
+    - leak-guard --format json . > gl-secret-detection-report.json
+  artifacts:
+    reports:
+      secret_detection: gl-secret-detection-report.json
+```
+
+## Output Formats
+
+**Text** (default) — human-readable with colors and redaction
+
+**JSON** — structured output for automation
+
+**SARIF** — GitHub Advanced Security / code scanning integration
 
 ## Contributing
 
-Contributions are welcome! Especially:
-- New Korean service patterns (배민, 당근, 쿠팡 등)
-- Improved regex accuracy
-- Additional test cases
+Contributions welcome! Especially:
+- New service patterns (open a PR with test cases)
+- Regional pattern plugins
+- Performance improvements
 
 ## License
 

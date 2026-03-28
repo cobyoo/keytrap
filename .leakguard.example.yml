@@ -1,0 +1,19 @@
+# leak-guard custom configuration
+# Copy this file to .leakguard.yml in your project root
+
+# Custom patterns for your organization
+patterns:
+  - name: "My Company Internal Token"
+    pattern: "MYCO_[A-Z0-9]{32}"
+    severity: high
+    category: custom
+
+  - name: "Internal Service Password"
+    pattern: "svc_pass_[a-zA-Z0-9]{16,}"
+    severity: high
+    ignorecase: true
+
+# Known safe values to ignore
+allowlist:
+  - "EXAMPLE_KEY_FOR_DOCS"
+  - "test_token_placeholder"
